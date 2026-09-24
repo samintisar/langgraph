@@ -130,6 +130,33 @@ class TestAsyncSqliteSaver:
             assert len(search_results_7) == 1
             assert search_results_7[0].config["configurable"]["thread_id"] == "thread-1"
 
+    async def test_metadata_filter_non_ascii_nested_values(self) -> None:
+        """Nested dict/list filter values with non-ASCII text should match."""
+        async with AsyncSqliteSaver.from_conn_string(":memory:") as saver:
+            config: RunnableConfig = {
+                "configurable": {
+                    "thread_id": "thread-non-ascii",
+                    "checkpoint_ns": "",
+                }
+            }
+            metadata: CheckpointMetadata = {
+                "user": {"name": "José"},
+                "tags": ["café"],
+                "city": "Zürich",
+            }
+            await saver.aput(config, empty_checkpoint(), metadata, {})
+
+            results = [
+                c async for c in saver.alist(None, filter={"user": {"name": "José"}})
+            ]
+            assert len(results) == 1
+
+            results = [c async for c in saver.alist(None, filter={"tags": ["café"]})]
+            assert len(results) == 1
+
+            results = [c async for c in saver.alist(None, filter={"city": "Zürich"})]
+            assert len(results) == 1
+
     async def test_limit_parameter_sql_injection_prevention(self) -> None:
         """Test that the limit parameter properly uses parameterized queries to prevent SQL injection."""
         async with AsyncSqliteSaver.from_conn_string(":memory:") as saver:

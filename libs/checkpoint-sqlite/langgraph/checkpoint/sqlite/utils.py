@@ -54,7 +54,11 @@ def _metadata_predicate(
         elif isinstance(query_value, dict) or isinstance(query_value, list):
             # query value for JSON object cannot have trailing space after separators (, :)
             # SQLite json_extract() returns JSON string without whitespace
-            return ("= ?", json.dumps(query_value, separators=(",", ":")))
+            # ensure_ascii=False matches how metadata is stored in put()
+            return (
+                "= ?",
+                json.dumps(query_value, separators=(",", ":"), ensure_ascii=False),
+            )
         else:
             return ("= ?", str(query_value))
 
